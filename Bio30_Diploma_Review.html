@@ -223,6 +223,57 @@ nav {
 }
 
 #countdown-display { font-size: 1rem; font-weight: 700; }
+/* ── STUDY SCHEDULE PANEL ─────────────────────────── */
+#schedule-panel {
+  display: none;
+  background: #fffbeb;
+  border-top: 2px solid rgba(180,130,0,0.18);
+  padding: 14px 40px 18px;
+  animation: schedSlide 0.3s ease;
+}
+@keyframes schedSlide {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+#schedule-panel.visible { display: block; }
+.schedule-title {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--green-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+.schedule-grid {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.sched-card {
+  background: white;
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 128px;
+  max-width: 190px;
+  flex: 1 1 128px;
+  border-top: 3px solid var(--sc-color,#4caf50);
+  box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+}
+.sched-card .sc-icon { font-size: 1.1rem; line-height:1; }
+.sched-card .sc-name { font-weight:700; font-size:0.8rem; color:#1a1a2e; margin:4px 0 1px; }
+.sched-card .sc-sub  { font-size:0.67rem; color:#888; margin-bottom:4px; }
+.sched-card .sc-dates{ font-size:0.7rem; font-weight:700; color:var(--sc-color,#4caf50); }
+.sched-card .sc-tip  { font-size:0.66rem; color:#999; margin-top:4px; line-height:1.4; }
+.sched-card a.sc-jump{
+  display:inline-block; margin-top:7px;
+  font-size:0.67rem; color:var(--sc-color,#4caf50);
+  text-decoration:none; font-weight:700;
+}
+.sched-card a.sc-jump:hover { text-decoration:underline; }
+
 
 /* ── SECTION LAYOUT ───────────────────────────────── */
 .section { padding: 56px 40px; max-width: 1100px; margin: 0 auto; }
@@ -589,6 +640,8 @@ footer strong { color: var(--amber); }
   <span>📅 Diploma Exam:</span>
   <input type="date" id="exam-date" onchange="updateCountdown()">
   <span id="countdown-display">← Set your exam date!</span>
+
+<div id="schedule-panel"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════ HERO -->
@@ -2236,19 +2289,125 @@ function updateProgress() {
 function updateCountdown() {
   const dateInput = document.getElementById('exam-date');
   const display = document.getElementById('countdown-display');
-  if (!dateInput.value) { display.textContent = '← Set your exam date!'; return; }
+  if (!dateInput.value) { display.textContent = '← Set your exam date!'; generateSchedule(-1); return; }
   const examDate = new Date(dateInput.value + 'T08:00:00');
   const now = new Date();
   const diff = examDate - now;
-  if (diff < 0) { display.textContent = 'Good luck — you\'ve got this! 🌟'; return; }
+  if (diff < 0) { display.textContent = 'Good luck — you\'ve got this! 🌟'; generateSchedule(0); return; }
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   if (days === 0) display.textContent = `Exam is TODAY! ${hours}h remaining 🎯`;
   else if (days === 1) display.textContent = `1 day to go — final review time! 💪`;
   else display.textContent = `${days} days until your diploma exam`;
+  generateSchedule(days);
   // Save date
   localStorage.setItem('bio30examdate', dateInput.value);
 }
+
+// ── Study schedule generator ──────────────────────────
+function generateSchedule(days) {
+  const panel = document.getElementById('schedule-panel');
+  if (!panel) return;
+  if (days < 0) { panel.classList.remove('visible'); return; }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const addD = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+  const fmt  = d => d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  const dateRange = (start,n) => n<=1 ? fmt(start) : `${fmt(start)} – ${fmt(addD(start,n-1))}`;
+
+  // Unit definitions — Biology 30
+  const UNITS = [
+    { icon:'🧠', name:'Unit A', sub:'Nervous & Endocrine',     anchor:'#unit-a', color:'#4caf50', w:25,
+      tips: ['Focus on homeostasis, hormone feedback loops, and neuron function.',
+             'Key diagrams: reflex arc, endocrine glands, hormone targets.',
+             'Outcomes checklist + key concept cards only.',
+             'Quick sweep: nervous system vocab & homeostasis.'] },
+    { icon:'🧬', name:'Unit B', sub:'Reproduction & Dev.',     anchor:'#unit-b', color:'#2196f3', w:20,
+      tips: ['Master the hormonal cycles (menstrual, pregnancy) and embryonic development.',
+             'Focus on hormonal feedback and embryonic stages.',
+             'Hormonal cycles & stages — one day, one unit.',
+             'Review hormonal cycle diagram.'] },
+    { icon:'🔬', name:'Unit C', sub:'Cell Division & Genetics', anchor:'#unit-c', color:'#9c27b0', w:35,
+      tips: ['Largest unit (35%) — genetics calculations appear as written response! Work through Punnett squares, pedigrees, linkage maps, and chi-square.',
+             'Prioritize: Punnett squares, pedigrees, meiosis, DNA replication, linkage maps.',
+             'Practice 5 genetics problems. Review pedigrees and chi-square.',
+             'Unit C quick sweep: meiosis diagram + one genetics problem.'] },
+    { icon:'🌍', name:'Unit D', sub:'Population Dynamics',          anchor:'#unit-d', color:'#ff9800', w:20,
+      tips: ['Ecological relationships, population growth graphs, succession, and sustainability.',
+             'Succession, population models, and ecosystem interactions.',
+             'Quick sweep: graphs, succession stages, ecology vocabulary.',
+             'Population graphs & ecological terms.'] },
+  ];
+
+  const DIPLOMA = { icon:'🎓', name:'Diploma Prep', sub:'Practice & Strategy', anchor:'#diploma', color:'#e91e63',
+    tips: ['Full practice exams under timed conditions. Review every wrong answer with the marking guide.',
+           'Complete 2 full practice exams. Review every wrong answer.',
+           'Use the outcomes checklist to find weak spots, then target practice questions.',
+           'Use the outcomes checklist. Practice diploma-style written response questions.'] };
+
+  const card = (icon,name,sub,anchor,color,dateStr,tip) =>
+    `<div class="sched-card" style="--sc-color:${color};border-top-color:${color}">
+      <div class="sc-icon">${icon}</div>
+      <div class="sc-name">${name}</div>
+      <div class="sc-sub">${sub}</div>
+      <div class="sc-dates">${dateStr}</div>
+      <div class="sc-tip">${tip}</div>
+      <a href="${anchor}" class="sc-jump">Go →</a>
+    </div>`;
+
+  let title, cards = '', cursor = new Date(today);
+
+  if (days === 0) {
+    title = '🌟 Exam Day — You\'ve prepared hard. Go show what you know!';
+    cards = `<div style="text-align:center;font-size:0.82rem;color:var(--green-dark);font-weight:600;padding:4px 0;">
+      Breathe. Read each question carefully. Show your work on written response. You’ve got this. 💪</div>`;
+  } else if (days >= 28) {
+    title = '📚 Comprehensive Review Plan';
+    const studyD = Math.floor(days * 0.80);
+    const prepD  = days - studyD;
+    for (let i=0;i<UNITS.length;i++) {
+      const u=UNITS[i], d=Math.max(1,Math.round(studyD*u.w/100));
+      cards += card(u.icon,u.name,u.sub,u.anchor,u.color,dateRange(cursor,d),u.tips[0]);
+      cursor=addD(cursor,d);
+    }
+    cards += card(DIPLOMA.icon,DIPLOMA.name,DIPLOMA.sub,DIPLOMA.anchor,DIPLOMA.color,dateRange(cursor,prepD),DIPLOMA.tips[0]);
+  } else if (days >= 14) {
+    title = '🎯 Focused Review Plan';
+    const studyD = Math.floor(days * 0.78);
+    const prepD  = Math.max(2, days - studyD);
+    for (let i=0;i<UNITS.length;i++) {
+      const u=UNITS[i], d=Math.max(1,Math.round(studyD*u.w/100));
+      cards += card(u.icon,u.name,u.sub,u.anchor,u.color,dateRange(cursor,d),u.tips[1]);
+      cursor=addD(cursor,d);
+    }
+    cards += card(DIPLOMA.icon,DIPLOMA.name,DIPLOMA.sub,DIPLOMA.anchor,DIPLOMA.color,dateRange(cursor,prepD),DIPLOMA.tips[1]);
+  } else if (days >= 5) {
+    title = '⚡ Rapid Review Mode';
+    const contentD = Math.ceil(days * 0.62);
+    const prepD    = Math.max(1, days - contentD);
+    for (let i=0;i<UNITS.length;i++) {
+      const u=UNITS[i], d=Math.max(1,Math.round(contentD*u.w/100));
+      cards += card(u.icon,u.name,u.sub,u.anchor,u.color,dateRange(cursor,d),u.tips[2]);
+      cursor=addD(cursor,d);
+    }
+    cards += card(DIPLOMA.icon,DIPLOMA.name,DIPLOMA.sub,DIPLOMA.anchor,DIPLOMA.color,dateRange(cursor,prepD),DIPLOMA.tips[2]);
+  } else {
+    title = '🔥 Exam Crunch Mode';
+    const phases = [
+      {icon:'✅',name:'Outcomes Sweep',sub:'All units',anchor:'#unit-a',color:'#4caf50',d:1,tip:'Go through every unit’s outcomes checklist. Flag anything you’re unsure of.'},
+      {icon:'📝',name:'Targeted Practice',sub:'Diploma-style Qs',anchor:'#diploma',color:'#e91e63',d:Math.max(1,days-2),tip:'Written response practice. Use the marking guides. Focus on genetics calculations.'},
+      {icon:'💤',name:'Rest Well',sub:'Night before exam',anchor:'#diploma',color:'#607d8b',d:1,tip:'Stop studying by 9 pm. Sleep 8+ hours. Your brain consolidates memory while you sleep.'},
+    ];
+    for (const p of phases) {
+      cards += card(p.icon,p.name,p.sub,p.anchor,p.color,dateRange(cursor,p.d),p.tip);
+      cursor=addD(cursor,p.d);
+    }
+  }
+
+  panel.innerHTML = `<div class="schedule-title">${title}</div><div class="schedule-grid">${cards}</div>`;
+  panel.classList.add('visible');
+}
+
 
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
